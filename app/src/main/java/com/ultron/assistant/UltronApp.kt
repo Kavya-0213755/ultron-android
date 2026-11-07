@@ -39,6 +39,7 @@ class UltronApp : Application() {
             override fun onActivitySaveInstanceState(a: Activity, b: Bundle) {}
             override fun onActivityDestroyed(a: Activity) {}
         })
+        Dnd.on.value = prefs.dnd
         if (prefs.token.isNotBlank()) client.start()
     }
 

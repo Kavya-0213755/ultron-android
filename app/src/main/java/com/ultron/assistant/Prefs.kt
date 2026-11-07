@@ -23,6 +23,27 @@ class Prefs(ctx: Context) {
     var followUp: Boolean
         get() = sp.getBoolean("followup", true)
         set(v) = sp.edit().putBoolean("followup", v).apply()
+    var dnd: Boolean
+        get() = sp.getBoolean("dnd", false)
+        set(v) = sp.edit().putBoolean("dnd", v).apply()
+    var dndReply: String
+        get() = sp.getString("dndReply", Dnd.DEFAULT_REPLY)!!
+        set(v) = sp.edit().putString("dndReply", v).apply()
+    var dndStarredRing: Boolean
+        get() = sp.getBoolean("dndStarred", true)
+        set(v) = sp.edit().putBoolean("dndStarred", v).apply()
+    var dndSilence: Boolean
+        get() = sp.getBoolean("dndSilence", true)
+        set(v) = sp.edit().putBoolean("dndSilence", v).apply()
+    var announceCalls: Boolean
+        get() = sp.getBoolean("announceCalls", true)
+        set(v) = sp.edit().putBoolean("announceCalls", v).apply()
+    var announceMessages: Boolean
+        get() = sp.getBoolean("announceMessages", false)
+        set(v) = sp.edit().putBoolean("announceMessages", v).apply()
+    var speakerOnAnswer: Boolean
+        get() = sp.getBoolean("speakerOnAnswer", true)
+        set(v) = sp.edit().putBoolean("speakerOnAnswer", v).apply()
     var conversationId: String?
         get() = sp.getString("conv", null)
         set(v) = sp.edit().putString("conv", v).apply()

@@ -160,7 +160,15 @@ class UltronClient(private val ctx: Context, private val prefs: Prefs) {
     private fun handle(ev: JSONObject) {
         when (ev.optString("type")) {
             "ready" -> send(JSONObject().put("type", "hello")
-                .put("device", "Android phone (${Build.MANUFACTURER} ${Build.MODEL})").put("local", false))
+                .put("device", "Android phone (${Build.MANUFACTURER} ${Build.MODEL})").put("local", false)
+                .put("phone", true))
+            "phone_action" -> {                                   // Ultron wants the phone to do something
+                val id = ev.optString("id")
+                scope.launch {
+                    val result = Phone.run(ctx, ev)
+                    send(JSONObject().put("type", "phone_result").put("id", id).put("result", result))
+                }
+            }
             "conversation" -> prefs.conversationId = ev.optString("id")
             "delta" -> appendStream(ev.optString("text"))
             "note" -> add("note", ev.optString("content"))
@@ -197,7 +205,7 @@ class UltronClient(private val ctx: Context, private val prefs: Prefs) {
         }
     }
 
-    private fun add(role: String, text: String): Long {
+    fun add(role: String, text: String): Long {
         val id = ids.getAndIncrement()
         messages.update { (it + ChatMsg(id, role, text)).takeLast(300) }
         return id

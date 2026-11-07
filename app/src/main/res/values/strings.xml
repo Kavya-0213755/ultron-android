@@ -2,4 +2,5 @@
 <resources>
     <string name="app_name">Ultron</string>
     <string name="talk">Talk to Ultron</string>
+    <string name="autosend_desc">Lets Ultron press Send in WhatsApp after it opens a chat with your message, so you can send WhatsApp messages by voice. It only acts in WhatsApp, for a few seconds after you ask Ultron to send something.</string>
 </resources>

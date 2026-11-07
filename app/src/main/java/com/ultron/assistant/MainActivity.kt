@@ -75,7 +75,10 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import android.app.NotificationManager
+import androidx.compose.runtime.mutableIntStateOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -178,6 +181,7 @@ class MainActivity : ComponentActivity() {
                     OutlinedButton(onClick = { askBatteryExemption() }, modifier = Modifier.fillMaxWidth()) {
                         Text("Let Ultron run in the background (battery)")
                     }
+                    PhonePowers()
                 }
                 Button(
                     enabled = !testing && token.isNotBlank(),
@@ -209,6 +213,63 @@ class MainActivity : ComponentActivity() {
                 if (msg.isNotBlank()) Text(msg, color = Color(0xFFFFB4A9), fontSize = 13.sp)
                 if (!first && msg.startsWith("Saved")) TextButton(onClick = done) { Text("Continue anyway") }
             }
+        }
+    }
+
+    @Composable
+    private fun PhonePowers() {
+        val prefs = app.prefs
+        var tick by remember { mutableIntStateOf(0) }
+        LifecycleResumeEffect(Unit) {
+            tick++
+            onPauseOrDispose { }
+        }
+        val askPerms = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { tick++ }
+        val nm = getSystemService(NotificationManager::class.java)
+        val fresh = tick >= 0                                 // re-checked every time the screen comes back
+        val callsOk = fresh && Phone.CALL_PERMS.all { Phone.has(this, it) }
+        val listenOk = fresh && NotifListener.enabled(this)
+        val autoOk = fresh && AutoSend.enabled(this)
+        val policyOk = fresh && nm.isNotificationPolicyAccessGranted
+        var reply by remember { mutableStateOf(prefs.dndReply) }
+        var announceCalls by remember { mutableStateOf(prefs.announceCalls) }
+        var speaker by remember { mutableStateOf(prefs.speakerOnAnswer) }
+        var announceMsgs by remember { mutableStateOf(prefs.announceMessages) }
+        var starred by remember { mutableStateOf(prefs.dndStarredRing) }
+
+        Spacer(Modifier.height(8.dp))
+        Text("Phone powers", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+        Text("Say things like “call Papa”, “send a WhatsApp to Rahul saying I'm on my way”, “read my messages”, " +
+            "“go to DND mode and say I'm driving”, “I'm back”.", color = Color.Gray, fontSize = 13.sp)
+        PermRow("Calls, SMS and contacts", callsOk) { askPerms.launch(Phone.CALL_PERMS) }
+        PermRow("Read & reply to messages (notification access)", listenOk) {
+            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+        }
+        PermRow("Send WhatsApp hands-free (Accessibility → Ultron)", autoOk) {
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        }
+        PermRow("DND can silence the phone", policyOk) {
+            startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+        }
+        Text("If Android says “Restricted setting”: open App info → ⋮ (top right) → “Allow restricted settings”, then try again.",
+            color = Color.Gray, fontSize = 12.sp)
+        TextButton(onClick = { Phone.openAppSettings(this@MainActivity) }) { Text("Open App info") }
+        SettingSwitch("Announce incoming calls (answer or reject by voice)", announceCalls) {
+            announceCalls = it; prefs.announceCalls = it
+        }
+        SettingSwitch("Put calls I answer by voice on speaker", speaker) { speaker = it; prefs.speakerOnAnswer = it }
+        SettingSwitch("Read new messages aloud", announceMsgs) { announceMsgs = it; prefs.announceMessages = it }
+        SettingSwitch("In DND, let favourite (starred) contacts ring", starred) { starred = it; prefs.dndStarredRing = it }
+        OutlinedTextField(reply, { reply = it; prefs.dndReply = it.ifBlank { Dnd.DEFAULT_REPLY } },
+            label = { Text("DND auto-reply") }, modifier = Modifier.fillMaxWidth(), maxLines = 3)
+    }
+
+    @Composable
+    private fun PermRow(label: String, ok: Boolean, fix: () -> Unit) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Text((if (ok) "✓ " else "○ ") + label, Modifier.weight(1f), color = if (ok) Color(0xFF7BD88F) else Color.White,
+                fontSize = 14.sp)
+            if (!ok) TextButton(onClick = fix) { Text("Allow") }
         }
     }
 
@@ -249,6 +310,7 @@ class MainActivity : ComponentActivity() {
         val wakeOn by WakeService.active.collectAsStateWithLifecycle()
         val wakeStatus by WakeService.status.collectAsStateWithLifecycle()
         val talk by talkRequest.collectAsStateWithLifecycle()
+        val dndOn by Dnd.on.collectAsStateWithLifecycle()
         var input by remember { mutableStateOf("") }
         var downloading by remember { mutableStateOf(false) }
         var progress by remember { mutableFloatStateOf(0f) }
@@ -353,6 +415,20 @@ class MainActivity : ComponentActivity() {
                         if (downloading) LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().padding(top = 4.dp))
                     }
                     Switch(checked = wakeOn || downloading, enabled = !downloading, onCheckedChange = { setWake(it) })
+                }
+                if (dndOn) Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
+                        .clip(RoundedCornerShape(12.dp)).background(Mine).padding(horizontal = 12.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("🔕 DND on — auto-replying", color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                    TextButton(onClick = {
+                        scope.launch {
+                            val summary = withContext(Dispatchers.IO) { Dnd.stop(this@MainActivity) }
+                            client.add("ultron", summary)
+                            if (app.prefs.speak) app.speaker.say(summary)
+                        }
+                    }) { Text("Turn off") }
                 }
                 if (note.isNotBlank()) Text(note, color = Color(0xFFFFB4A9), fontSize = 13.sp,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))

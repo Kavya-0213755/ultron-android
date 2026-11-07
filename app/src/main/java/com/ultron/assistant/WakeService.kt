@@ -113,7 +113,25 @@ class WakeService : Service() {
             rec.startRecording()
             show("Say “Hey Ultron”")
             val buf = ByteArray(3200)                          // 0.1 s
+            var announced: String? = null
             while (running) {
+                if (CallState.inCall.value) {                  // on a call: give the mic to the call
+                    show("Paused during the call")
+                    rec.stop()
+                    while (running && CallState.inCall.value) Thread.sleep(500)
+                    rec.startRecording()
+                    recog.reset()
+                    show("Say “Hey Ultron”")
+                    continue
+                }
+                val caller = CallState.ringing.value
+                if (caller == null) announced = null
+                else if (caller != announced && UltronApp.instance.prefs.announceCalls) {
+                    announced = caller
+                    incomingCall(rec, model, caller)
+                    recog.reset()
+                    continue
+                }
                 if (talkNow) {
                     talkNow = false
                     converse(rec)
@@ -137,6 +155,42 @@ class WakeService : Service() {
             try { recog?.close() } catch (_: Exception) {}
             try { model?.close() } catch (_: Exception) {}
             active.value = false
+        }
+    }
+
+    /** "Call from Papa. Answer or reject?" — then listens for the answer (offline, quick). */
+    private fun incomingCall(rec: AudioRecord, model: Model, caller: String) {
+        val app = UltronApp.instance
+        show("Call from $caller — say “answer” or “reject”")
+        runBlocking { app.speaker.say("Call from $caller. Answer or reject?") }
+        rec.stop()
+        rec.startRecording()                                   // drop our own voice
+        val r = Recognizer(model, 16000f, CALL_GRAMMAR)
+        val buf = ByteArray(3200)
+        val until = System.currentTimeMillis() + 15_000
+        try {
+            while (running && CallState.ringing.value != null && System.currentTimeMillis() < until) {
+                val n = rec.read(buf, 0, buf.size)
+                if (n <= 0) continue
+                if (!r.acceptWaveForm(buf, n)) continue                 // only whole, finished words count
+                val t = try { JSONObject(r.result).optString("text") } catch (_: Exception) { "" }
+                when {
+                    Regex("\\b(answer|pick|receive|accept)\\b").containsMatchIn(t) -> {
+                        val said = Phone.answerCall(this)
+                        show(said)
+                        return
+                    }
+                    Regex("\\b(reject|decline|cut|busy|nahi)\\b").containsMatchIn(t) -> {
+                        val ok = Phone.endCall(this)
+                        show(if (ok) "Call declined" else "Couldn't decline the call")
+                        if (ok && Regex("\\bbusy\\b").containsMatchIn(t)) runBlocking { app.speaker.say("Declined.") }
+                        return
+                    }
+                }
+            }
+        } finally {
+            r.close()
+            show("Say “Hey Ultron”")
         }
     }
 
@@ -165,6 +219,11 @@ class WakeService : Service() {
         private val GRAMMAR = listOf(
             "hey ultron", "ultron", "ok ultron", "hey ultra", "hey alton", "hey elton", "hey electron",
             "altron", "hey altron", "[unk]"
+        ).joinToString(",", "[", "]") { "\"$it\"" }
+
+        private val CALL_GRAMMAR = listOf(
+            "answer", "answer it", "pick up", "receive", "accept", "reject", "decline", "cut it", "busy",
+            "nahi", "[unk]"
         ).joinToString(",", "[", "]") { "\"$it\"" }
 
         private val NAMES = Regex("\\b(ultron|altron)\\b")

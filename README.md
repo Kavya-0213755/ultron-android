@@ -7,6 +7,8 @@ Native Android app for Ultron, the personal assistant that runs on the home PC.
   (Vosk), the request is turned into text by the PC (free Groq Whisper / Gemini) and the answer is spoken
   with the phone's own voice.
 * Connects at home over Wi-Fi (`http://192.168.x.x:8765`) and from anywhere through Tailscale.
+* Phone powers: call people, send WhatsApp/SMS, read new messages, answer or reject calls by voice, and a
+  DND mode that auto-replies to messages and declines calls (favourites can still ring), with a summary after.
 * Can be set as the phone's assistant (long-press home/power) and has a “Talk to Ultron” shortcut.
 
 Every push builds `Ultron.apk` with GitHub Actions (free) and publishes it as the **latest** release.
