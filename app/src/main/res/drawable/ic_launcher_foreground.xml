@@ -2,10 +2,20 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <!-- outer ring -->
-    <path android:fillColor="#00000000" android:strokeColor="#E0322B" android:strokeWidth="4"
-        android:pathData="M54,30 A24,24 0 1,1 53.99,30 Z" />
-    <!-- glowing core -->
-    <path android:fillColor="#FF6A3D" android:pathData="M54,44 A10,10 0 1,1 53.99,44 Z" />
-    <path android:fillColor="#FFE3D6" android:pathData="M54,49 A5,5 0 1,1 53.99,49 Z" />
+    <!-- halo -->
+    <path android:fillColor="#00000000" android:strokeColor="#8CD9B779" android:strokeWidth="1.6"
+        android:pathData="M54,27 A27,27 0 1,1 53.99,27 Z" />
+    <path android:fillColor="#00000000" android:strokeColor="#F3DFB5" android:strokeWidth="2.4"
+        android:strokeLineCap="round" android:pathData="M54,27 A27,27 0 0,1 79.7,45.6" />
+    <!-- champagne core -->
+    <path android:pathData="M54,38 A16,16 0 1,1 53.99,38 Z">
+        <aapt:attr xmlns:aapt="http://schemas.android.com/aapt" name="android:fillColor">
+            <gradient android:type="radial" android:centerX="49" android:centerY="48" android:gradientRadius="22">
+                <item android:offset="0" android:color="#FFF4EFE6" />
+                <item android:offset="0.35" android:color="#FFF3DFB5" />
+                <item android:offset="0.7" android:color="#FFD9B779" />
+                <item android:offset="1" android:color="#FF8C6A3E" />
+            </gradient>
+        </aapt:attr>
+    </path>
 </vector>
