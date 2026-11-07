@@ -216,6 +216,15 @@ object Phone {
                 "dnd_on" -> Dnd.start(ctx, text)
                 "dnd_off" -> Dnd.stop(ctx)
                 "find_contact" -> Contacts.find(ctx, to)?.let { "${it.name}: ${it.number}" } ?: whoNotFound(to)
+                "open_app" -> PhoneApps.openApp(ctx, to.ifBlank { text })
+                "play_music" -> PhoneApps.playMusic(ctx, text, ev.optString("app", "spotify"))
+                "media" -> PhoneApps.media(ctx, text)
+                "volume" -> PhoneApps.volume(ctx, text)
+                "open_url" -> PhoneApps.openUrl(ctx, text.ifBlank { to })
+                "navigate" -> PhoneApps.navigate(ctx, to.ifBlank { text })
+                "alarm" -> PhoneApps.alarm(ctx, text)
+                "timer" -> PhoneApps.timer(ctx, ev.optInt("count", 0))
+                "flashlight" -> PhoneApps.flashlight(ctx, !text.lowercase().contains("off"))
                 else -> "The phone app doesn't know “${ev.optString("action")}” yet — update the Ultron app."
             }
         } catch (e: SecurityException) {

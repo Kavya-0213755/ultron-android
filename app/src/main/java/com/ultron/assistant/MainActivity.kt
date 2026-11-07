@@ -231,6 +231,7 @@ class MainActivity : ComponentActivity() {
         val listenOk = fresh && NotifListener.enabled(this)
         val autoOk = fresh && AutoSend.enabled(this)
         val policyOk = fresh && nm.isNotificationPolicyAccessGranted
+        val overlayOk = fresh && Settings.canDrawOverlays(this)
         var reply by remember { mutableStateOf(prefs.dndReply) }
         var announceCalls by remember { mutableStateOf(prefs.announceCalls) }
         var speaker by remember { mutableStateOf(prefs.speakerOnAnswer) }
@@ -239,9 +240,13 @@ class MainActivity : ComponentActivity() {
 
         Spacer(Modifier.height(8.dp))
         Text("Phone powers", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-        Text("Say things like “call Papa”, “send a WhatsApp to Rahul saying I'm on my way”, “read my messages”, " +
-            "“go to DND mode and say I'm driving”, “I'm back”.", color = Color.Gray, fontSize = 13.sp)
+        Text("Say things like “open Instagram”, “play Kesariya”, “set an alarm for 6:30”, “torch on”, “call Papa”, " +
+            "“send a WhatsApp to Rahul saying I'm on my way”, “read my messages”, “go to DND mode and say I'm driving”, " +
+            "“I'm back”. Add “on the computer” to do it on the PC instead.", color = Color.Gray, fontSize = 13.sp)
         PermRow("Calls, SMS and contacts", callsOk) { askPerms.launch(Phone.CALL_PERMS) }
+        PermRow("Open apps & play music from the background (Display over other apps)", overlayOk) {
+            startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
+        }
         PermRow("Read & reply to messages (notification access)", listenOk) {
             startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
         }
